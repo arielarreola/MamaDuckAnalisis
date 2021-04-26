@@ -1,5 +1,7 @@
 ﻿import streamlit as st #funciones generales de streamlit
 from bokeh.plotting import figure as grafica #para mostrar graficas de lineas
+import plotnine as p9 #pip install plotnine
+from bokeh.models import ColumnDataSource
 from PIL import Image #para abrir imagenes
 import numpy as np
 import pandas as pd
@@ -16,7 +18,7 @@ with col2:
     st.image(image, caption='Mama Duck',width=80)
 
 #importamos el json
-with open('impro.json') as file:
+with open('ejemplo.json') as file:
     datajson = json.load(file)
 jnodes=datajson.get("nodes")
 jn1=jnodes[0]#esta variable guarda todo el json
@@ -128,6 +130,36 @@ def obtencionlistasJS(numnodo):
 #numero de ocurrencias de las horas de jhoursp
 #tipo de emergencias en formato string y sin repetirse
 #numero de emergencias por cada tipo (correspondiendo al orden presentado en nremerg)
+def obtencionlistasJS2():
+  typemergency=list()
+  jdays=list()#cuenta las ocurrencias de horas
+  jhours=list()
+  jnums=list()
+  #para jhours
+  #para jnemergency
+  for i in range(len(jn1.get('1')[0]['history'])):
+    ad=jn1.get('1')[0]['history'][i]['date']
+    jdays.append(ad)
+  for i in range(len(jn1.get('2')[0]['history'])):
+    ad=jn1.get('2')[0]['history'][i]['date']
+    jdays.append(ad)
+  for i in range(len(jn1.get('3')[0]['history'])):
+    ad=jn1.get('3')[0]['history'][i]['date']
+    jdays.append(ad)
+  for i in range(len(jn1.get('4')[0]['history'])):
+    ad=jn1.get('4')[0]['history'][i]['date']
+    jdays.append(ad)
+  jdaystab=list()
+  for e in jdays:
+    if e not in jdaystab:
+      jdaystab.append(e)
+  for item in jdaystab:
+    jnums.append(jdays.count(item))
+  dtdate=list()
+  for y in range(len(jdaystab)):
+    dtdate.append(datetime.datetime.strptime(str(jdaystab[y][0]), "{'year': '%Y',  'month': '%m', 'day': '%d'}"))
+  return dtdate,jnums
+
 def regresionLinealNumEmergen(X, Y, numuser,numnodo):
     X = X.reshape(-1, 1)
     # cada elemento solo tiene un feature
@@ -193,7 +225,7 @@ def plottypecalls(x,y,color1):
 
 
 nodoseleccionado = st.radio("Seleccione un nodo",
-('Mama Duck', 'Nodo 2', 'Nodo 3', 'Nodo 4'))
+('Mama Duck', 'Nodo 2', 'Nodo 3', 'Nodo 4','General'))
 if nodoseleccionado=='Mama Duck':
     st.header('Análisis de los datos del Nodo Mama Duck')
     a,b,c,d,e,f=obtencionlistasJS('1')
@@ -249,56 +281,61 @@ elif nodoseleccionado=='Nodo 4':
 #voy a desplegar el historial dellamadas en una tabla
 #voy a mostrar el numero de llamadas por dia
 
+elif nodoseleccionado=='General':
+  st.header('Análisis general de la red Mama Duck')
 
-st.header('Análisis general de la red Mama Duck')
 
-#NO EMPEZADO
-x = [1, 2, 3, 4, 5, 6, 7, 8, 9,10,11]
-#x = ["01-mar", "02-mar", "03-mar","04-mar","05-mar","06-mar","07-mar","08-mar","09-mar","10-mar","11-mar"]
-y = [6, 7, 2, 4, 5, 1, 0, 3, 1, 0, 2]
-p = grafica(
-title='Llamadas totales recibidas por dia',
-x_axis_label='Fecha',
-y_axis_label='Llamadas recibidas')
+  a,b=obtencionlistasJS2()
+  listdt=list()
+  for x in range(len(a)):
+    stra=str(a[x])
+    listdt.append([stra[5:10],b[x]])
+  df=pd.DataFrame(listdt,columns=['Fecha','Emergencias'])
+  #df["Fecha"]=pd.to_datetime(df["Fecha"])
+  #df["Fecha"]=str(df["Fecha"][:])
+  #df.sort_values(['Fecha'])
+  dotgraph = p9.ggplot(data=df,
+                          mapping=p9.aes(x='Fecha', y='Emergencias'))
 
-p.line(x, y, legend_label='Número de llamadas', line_width=2,color='yellow')
-
-st.bokeh_chart(p, use_container_width=True)
-#voy a mostrar el numero de llamadas por hora dado un dia
-#mostrar estadistica de tipo de accidente--graficas
-#mostrar warnings del nodo--lo que hizo alex de acuerdo con el json recibido
-#mostrar emergencias comunes--haciendo abstraccion de los datos recibidos
-#predecir posibles accidentes totales--usando el algoritmo de IRIS (visto en clases de ML)
-df1,df2=obtencionCoords()
-st.pydeck_chart(pdk.Deck(
- map_style='mapbox://styles/mapbox/light-v9',
- initial_view_state=pdk.ViewState(
-     latitude=20.63494981128319,
-     longitude=-103.40648023281342,
-     zoom=17,
-     pitch=50,
- ),
- 
- layers=[
-     pdk.Layer(
-        'HexagonLayer',
-        data=df2,
-        get_position='[lon, lat]',
-        radius=3,
-        elevation_scale=4,
-        elevation_range=[0, 10],
-        pickable=True,
-        extruded=True,
-     ),
-     pdk.Layer(
-         'ScatterplotLayer',
-         data=df1,
-         get_position='[lon, lat]',
-         get_color='[100, 230, 0, 160]',
-         get_radius=2,
-     ),
- ],
-))
+  st.pyplot(p9.ggplot.draw(dotgraph + p9.geom_point(color='green',alpha=0.5,size=2.7)))
+  #voy a mostrar el numero de llamadas por hora dado un dia
+  #mostrar estadistica de tipo de accidente--graficas
+  #mostrar warnings del nodo--lo que hizo alex de acuerdo con el json recibido
+  #mostrar emergencias comunes--haciendo abstraccion de los datos recibidos
+  #predecir posibles accidentes totales--usando el algoritmo de IRIS (visto en clases de ML)
+  st.header("Mapa de nodos y emergencias")
+  st.write("Hexagonos: casos de emergencia, Círculo verde: nodos")
+  df1,df2=obtencionCoords()
+  st.pydeck_chart(pdk.Deck(
+  map_style='mapbox://styles/uberdata/cjoqbbf6l9k302sl96tyvka09',
+  initial_view_state=pdk.ViewState(
+      latitude=20.63494981128319,
+      longitude=-103.40648023281342,
+      zoom=17,
+      pitch=50,
+  ),
+  
+  layers=[
+      pdk.Layer(
+          'HexagonLayer',
+          data=df2,
+          get_position='[lon, lat]',
+          #colorRange='[0, 240,255,255]',
+          radius=3,
+          elevation_scale=4,
+          elevation_range=[0, 10],
+          pickable=True,
+          extruded=True,
+      ),
+      pdk.Layer(
+          'ScatterplotLayer',
+          data=df1,
+          get_position='[lon, lat]',
+          get_color='[100, 230, 0, 160]',
+          get_radius=2,
+      ),
+  ],
+  ))
 
 
 
