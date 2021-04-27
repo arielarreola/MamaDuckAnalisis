@@ -10,6 +10,7 @@ import pydeck as pdk
 import datetime#libreria para usar formatos de fechas 
 import json#libreria para usar json
 import matplotlib.pyplot as plt
+from pyvis import network as net
 
 image = Image.open('duck.png')
 st.title("Reportes para Mama Duck")
@@ -130,6 +131,9 @@ def obtencionlistasJS(numnodo):
 #numero de ocurrencias de las horas de jhoursp
 #tipo de emergencias en formato string y sin repetirse
 #numero de emergencias por cada tipo (correspondiendo al orden presentado en nremerg)
+strindices=[]
+for i in range(len(jn1)):
+  strindices.append(str(i+1))#esta ya puede utilizarse para otras funciones
 def obtencionlistasJS2():
   typemergency=list()
   jdays=list()#cuenta las ocurrencias de horas
@@ -304,7 +308,7 @@ elif nodoseleccionado=='General':
   #mostrar emergencias comunes--haciendo abstraccion de los datos recibidos
   #predecir posibles accidentes totales--usando el algoritmo de IRIS (visto en clases de ML)
   st.header("Mapa de nodos y emergencias")
-  st.write("Hexagonos: casos de emergencia, Círculo verde: nodos")
+  st.write("Hexagonos: ubicacion de nodos, Círculo verde: casos de emergencia")
   df1,df2=obtencionCoords()
   st.pydeck_chart(pdk.Deck(
   map_style='mapbox://styles/uberdata/cjoqbbf6l9k302sl96tyvka09',
@@ -336,6 +340,24 @@ elif nodoseleccionado=='General':
       ),
   ],
   ))
+  st.title("Nodos receptores Mama Duck")
+  st.write("A continución se muestra la distribución de nodos de Mama Duck, sus interconexiones e información")
+  g=net.Network(height='400px', width='50%')
+  strindices=[]
+  for i in range(len(jn1)):
+
+    g.add_node(i+1,title=[jn1.get(str(strindices[i]))[0].get('name'),"\nholamundo"     ] )
+      
+  for st in strindices:
+    for s in range(len(jn1.get(st)[0]['conections'])):
+      aux=jn1.get(st)[0]['conections']             
+      g.add_edge(int(st),int(aux[s]))
+
+
+  g.save_graph('graph.html')
+  HtmlFile=open('graph.html','r',encoding='utf-8')
+  sourceCode=HtmlFile.read()
+  components.html(sourceCode,height=900,width=900)
 
 
 
