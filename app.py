@@ -32,33 +32,23 @@ jn1=jnodes[0]#esta variable guarda todo el json
 #*
 ## ESPACIO PARA FUNCIONES GLOBALES, DE ML Y DE IA
 ## ESPACIO PARA FUNCIONES GLOBALES, DE ML Y DE IA
+
+strindices=[]
+for i in range(len(jn1)):
+  strindices.append(str(i+1))#esta ya puede utilizarse para otras funciones
+
+
 def obtencionCoords():
   #lat y lon 1 es para coordenadas de llamadas
   #lat  lon2 son para coordenadas de NODOS
   list1=list()
   list2=list()
-
-  for i in range(len(jn1.get('1')[0]['history'])):
-    auxlat=jn1.get(str('1'))[0]['history'][i]['localization'][0]['lat']
-    auxlon=jn1.get(str('1'))[0]['history'][i]['localization'][0]['long']
-    list1.append([auxlat,auxlon])
-  for i in range(len(jn1.get('2')[0]['history'])):
-    auxlat=jn1.get(str('2'))[0]['history'][i]['localization'][0]['lat']
-    auxlon=jn1.get(str('2'))[0]['history'][i]['localization'][0]['long']
-    list1.append([auxlat,auxlon])
-  for i in range(len(jn1.get('3')[0]['history'])):
-    auxlat=jn1.get(str('3'))[0]['history'][i]['localization'][0]['lat']
-    auxlon=jn1.get(str('3'))[0]['history'][i]['localization'][0]['long']
-    list1.append([auxlat,auxlon])
-  for i in range(len(jn1.get('4')[0]['history'])):
-    auxlat=jn1.get(str('4'))[0]['history'][i]['localization'][0]['lat']
-    auxlon=jn1.get(str('4'))[0]['history'][i]['localization'][0]['long']
-    list1.append([auxlat,auxlon])
-    list2.append([jn1.get('1')[0]['localization'][0]['lat'],jn1.get('1')[0]['localization'][0]['long']])
-    list2.append([jn1.get('2')[0]['localization'][0]['lat'],jn1.get('2')[0]['localization'][0]['long']])
-    list2.append([jn1.get('3')[0]['localization'][0]['lat'],jn1.get('3')[0]['localization'][0]['long']])
-    list2.append([jn1.get('4')[0]['localization'][0]['lat'],jn1.get('4')[0]['localization'][0]['long']])
-
+  for s in strindices:
+    for i in range(len(jn1.get(str(s))[0]['history'])):
+      auxlat=jn1.get(str(s))[0]['history'][i]['localization'][0]['lat']
+      auxlon=jn1.get(str(s))[0]['history'][i]['localization'][0]['long']
+      list1.append([auxlat,auxlon])
+      list2.append([jn1.get(str(s))[0]['localization'][0]['lat'],jn1.get('1')[0]['localization'][0]['long']])
   a1=np.array(list1)
   a2=np.array(list2)
   #print(a1.reshape(-2,2))
@@ -131,9 +121,7 @@ def obtencionlistasJS(numnodo):
 #numero de ocurrencias de las horas de jhoursp
 #tipo de emergencias en formato string y sin repetirse
 #numero de emergencias por cada tipo (correspondiendo al orden presentado en nremerg)
-strindices=[]
-for i in range(len(jn1)):
-  strindices.append(str(i+1))#esta ya puede utilizarse para otras funciones
+
 def obtencionlistasJS2():
   typemergency=list()
   jdays=list()#cuenta las ocurrencias de horas
@@ -141,18 +129,10 @@ def obtencionlistasJS2():
   jnums=list()
   #para jhours
   #para jnemergency
-  for i in range(len(jn1.get('1')[0]['history'])):
-    ad=jn1.get('1')[0]['history'][i]['date']
-    jdays.append(ad)
-  for i in range(len(jn1.get('2')[0]['history'])):
-    ad=jn1.get('2')[0]['history'][i]['date']
-    jdays.append(ad)
-  for i in range(len(jn1.get('3')[0]['history'])):
-    ad=jn1.get('3')[0]['history'][i]['date']
-    jdays.append(ad)
-  for i in range(len(jn1.get('4')[0]['history'])):
-    ad=jn1.get('4')[0]['history'][i]['date']
-    jdays.append(ad)
+  for s in strindices:
+    for i in range(len(jn1.get(str(s))[0]['history'])):
+      ad=jn1.get(str(s))[0]['history'][i]['date']
+      jdays.append(ad)
   jdaystab=list()
   for e in jdays:
     if e not in jdaystab:
