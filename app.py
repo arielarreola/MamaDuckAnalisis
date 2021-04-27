@@ -14,6 +14,8 @@ from pyvis import network as net
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score  
+from queue import PriorityQueue #libreria colas de prioridad
+import math #Para los infinitos
 
 image = Image.open('duck.png')
 st.title("Reportes para Mama Duck")
@@ -35,6 +37,86 @@ jn1=jnodes[0]#esta variable guarda todo el json
 #*
 ## ESPACIO PARA FUNCIONES GLOBALES, DE ML Y DE IA
 ## ESPACIO PARA FUNCIONES GLOBALES, DE ML Y DE IA
+
+def DataJSONtoGraph(numnodo):#funcion para extraer datos de acuerdo con el formato del algoritmo de recorrido
+  ismamaduck=False
+  numcalls=0
+  activetime=None
+  numcalls=len(jn1.get(numnodo)[0]['history'])#ya esta listo numcalls
+  numConected=len(jn1.get(numnodo)[0]['conections'])
+  if numnodo=='1':
+    ismamaduck=True
+  adys=jn1.get(numnodo)[0]['conections']
+  return int(numnodo),numConected,None,ismamaduck,numcalls,activetime,adys
+
+
+
+def recorridonodos(n1):  # recibe una cadena de valores
+    n0 = n1  # lo cofiguro como un nodo tipo puzzle
+    Q = PriorityQueue()  # Q es una cola de prioridad
+    aux = 0  # otro indice secundario de prioridad para Q
+    Q.put((n0.f, aux, n0))  # la cola de prioridad se manejará mediante los f(n)
+    visitados = []
+    visitadoschart = []
+    while not Q.empty():  # mientras la cola no este vacía
+        u = Q.get()  # con el metodo get se guarda en u pero se quita de la cola el elemento
+        u = u[2]  # porque una cola de prioridad almacena tuplas de prioridad,contador,nodo
+        if u.tag not in visitados:
+            visitados.append(u.tag)  # para evitar volverlo a visitar
+            visitadoschart.append(u)
+        ady = u.expand(u.ady1)  # expand me genera una lista de adyacencia, con heuristica y señalando a su padre, establece costo de 1 al generar neuvo nodo
+        for v in ady:  # explorar los vecinos
+ #           print("Heuristica de ", v.tag, " :", v.h)
+            if v.tag not in visitados:  # si todavia no esta en visitados
+                fp = v.h + v.g  # cálculo de funciones
+                if fp < v.f:
+                    v.f = fp
+                    aux = aux + 1  # debo tener un entero antes de insertar un nodo en prioridad
+                    Q.put((-(v.f), aux,
+                           v))  # lo colocamos en la cola, para que en cada ciclo se evite agregar uno repetido
+    return visitados, visitadoschart
+def functionwhy(result):
+  chart=list()
+  ismd=""
+  for u in result:
+    if u.mamaduck==True:
+      ismd="Sí"
+    else:
+      ismd="No"
+    chart.append([u.tag,u.conexiones,ismd,u.h,u.ady1])
+  df=pd.DataFrame(chart)
+  df.columns = ["No. de nodo", "No. nodos conectados", "Es Mamaduck?","Llamadas recibidas","Adyacentes"]
+  st.write(df)
+
+  return df
+class Nodo:
+    w=None
+    h = None  # heuristica
+    f = math.inf  # f es infinito
+
+    def __init__(self, tag, conexiones, padre, mamaduck, personasconect, tiempoactivos,ady1):  # inicializador
+        self.tag = tag
+        self.conexiones = conexiones
+        self.padre = padre
+        self.mamaduck = mamaduck
+        self.tiempoactivos = tiempoactivos
+        self.ady1 = ady1
+        if padre is not None:  # si es un hijo
+            self.g = padre.g + 1
+        else:  # si es padre
+            self.g = 0
+            self.f = 0  # su f debe valer 0
+        self.h = personasconect
+    def expand(self, ady1):  # nos va a decir como explorar el grafo, obtiene la raiz en primera instancia
+        ady = []  # aqui guardaremos los adyacentes que son objetos del tipo nodo
+        for i in ady1:
+          tag,conections,parent,mamaduck,people,timeactive,list1=DataJSONtoGraph(i)
+          ady.append(Nodo(tag, conections, self, mamaduck, people, timeactive,list1))
+        #  for i in ady1:
+        #      ady.append(Nodo(ady1[i].conexiones,self,ady1[i].mamaduck,ady1[i].personasconect,ady1[i].tiempoativos))#creo nodo y lo guardo a la cola de adyacentes
+        return ady  # retornamos los adyacentes o hijos del nodo expandido
+
+
 
 
 def prepdatoLRML(e,f,g):
@@ -535,9 +617,21 @@ elif nodoseleccionado=='General':
   g.save_graph('graph.html')
   HtmlFile=open('graph.html','r',encoding='utf-8')
   sourceCode=HtmlFile.read()
-  components.html(sourceCode,height=1500,width=1500)
+  components.html(sourceCode,height=400,width=1500)
+  st.header("Monitoreo de nodos")
+  tag,conections,parent,mamaduck,people,timeactive,list1=DataJSONtoGraph('1')
 
-
+  n1=Nodo(tag,conections,parent,mamaduck,people,timeactive,list1)
+  st.write("Se esta calculando el algoritmo...")
+  res,restab=recorridonodos(n1)#iniciamos el algoritmo de A estrella en una variable de objeto
+  st.write("El Nodo: %d "%res[1],"requiere ser monitoreado prioritariamente. Seleccione 'Más detalles' para más información")#en res 1 está el nodo elegido como prioritario, esta función imprimirá el porqué primero este y porque los demas
+  st.header("Orden de prioridad")
+  st.header(res)
+  if st.button("Más detalles..."):
+      if not restab and not res:
+        st.write("Primero presione en el botón de Monitoreo de nodos para presentarle detalles")
+      else:
+        functionwhy(restab)
 
 #SIN FUNCIONALIDAD POR AHORA PERO PUEDEN SERVIR MAS ADELANTE
 #st.header('Histórico por día')
