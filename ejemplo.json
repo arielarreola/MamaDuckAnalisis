@@ -219,7 +219,7 @@
                             "month":"04",
                             "day":"21"}],
                         "hour":"15:00",
-                        "emergency":["medic"],
+                        "emergency":["sos"],
                         "need":["first aid","ambulance"],
                         "message":"accidente en partido",
                         "localization":[{

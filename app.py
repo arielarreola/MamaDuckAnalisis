@@ -11,6 +11,9 @@ import datetime#libreria para usar formatos de fechas
 import json#libreria para usar json
 import matplotlib.pyplot as plt
 from pyvis import network as net
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score  
 
 image = Image.open('duck.png')
 st.title("Reportes para Mama Duck")
@@ -32,6 +35,55 @@ jn1=jnodes[0]#esta variable guarda todo el json
 #*
 ## ESPACIO PARA FUNCIONES GLOBALES, DE ML Y DE IA
 ## ESPACIO PARA FUNCIONES GLOBALES, DE ML Y DE IA
+
+
+def prepdatoLRML(e,f,g):
+  max_item_index = f.index(max(f, key=int))
+  namemergency=e[max_item_index]
+  contador=0
+  tuplapred=[]
+  for i in range(len(e)):
+    contador+=f[i]
+  porcentaje=f[max_item_index]/contador
+  if namemergency=='fire':
+    tuplapred.append([porcentaje+1,g[0].get('firerisk')])
+  elif namemergency=='medic':
+    tuplapred.append([porcentaje,g[0].get('medicrisk')])
+  elif namemergency=='medic':
+    tuplapred.append([porcentaje+2,g[0].get('securityrisk')])
+  elif namemergency=='sos':
+    tuplapred.append([porcentaje+3,(g[0].get('other')+g[0].get('securityrisk')+g[0].get('medicrisk')+g[0].get('firerisk'))/4])
+  return tuplapred
+
+def prepdatoLRMLGen(e,f,g):
+  max_item_index = f.index(max(f, key=int))
+  namemergency=e[max_item_index]
+  contador=0
+  tuplapred=[]
+  promfire=prommedic=promsec=promother=0
+  promedios=list()#aqui se guardará el promedio de riesgos de todos los nodos
+  for elem in range(len(g)):
+    promfire+=g[elem].get('firerisk')
+    prommedic+=g[elem].get('medicrisk')
+    promsec+=g[elem].get('securityrisk')
+    promother+=g[elem].get('other')
+  promedios.append(promfire/len(g))
+  promedios.append(prommedic/len(g))
+  promedios.append(promsec/len(g))
+  promedios.append(promother/len(g))
+  for i in range(len(e)):
+    contador+=f[i]
+  porcentaje=f[max_item_index]/contador
+  if namemergency=='fire':
+    tuplapred.append([porcentaje+1,promedios[0]])
+  elif namemergency=='medic':
+    tuplapred.append([porcentaje,promedios[1]])
+  elif namemergency=='medic':
+    tuplapred.append([porcentaje+2,promedios[2]])
+  elif namemergency=='sos':
+    tuplapred.append([porcentaje+3,(promedios[3]+promedios[2]+promedios[1]+promedios[0])/4])
+  return tuplapred
+
 
 strindices=[]
 for i in range(len(jn1)):
@@ -70,6 +122,9 @@ def obtencionlistasJS(numnodo):
   jnumsoc=list()#cuenta las ocurrencias de horas
   jhours=list()
   jndate=list()
+  jrisks=list()
+  varisk=jn1.get(numnodo)[0]['risks'][0]
+  jrisks.append(varisk)
   #para jhours
   #para jnemergency
   for i in range(len(jn1.get(numnodo)[0]['history'])):
@@ -114,7 +169,7 @@ def obtencionlistasJS(numnodo):
     countemetype.append(jnemergency2.count(item))
   ##print(countemetype)
 
-  return dtdate,jnemergency2,jhoursp,jnumsoc,nremerg,countemetype
+  return dtdate,jnemergency2,jhoursp,jnumsoc,nremerg,countemetype,jrisks
 #en este orden devuelve...
 #fechas en formato datetime (solo fechas, no horas)
 #emergencias por tipo (incluyendo si aplica mas de un tipo de emergencia)formato arreglo de [[],[],...]
@@ -122,6 +177,63 @@ def obtencionlistasJS(numnodo):
 #numero de ocurrencias de las horas de jhoursp
 #tipo de emergencias en formato string y sin repetirse
 #numero de emergencias por cada tipo (correspondiendo al orden presentado en nremerg)
+def obtencionlistasJS3():
+  jnemergency=list()
+  jnumsoc=list()#cuenta las ocurrencias de horas
+  jhours=list()
+  jndate=list()
+  jrisks=list()
+  #para jhours
+  #para jnemergency
+  for numnodo in strindices:
+      varisk=jn1.get(numnodo)[0]['risks'][0]
+      jrisks.append(varisk)
+
+
+  for numnodo in strindices:
+    for i in range(len(jn1.get(str(numnodo))[0]['history'])):
+      varauxem=jn1.get(str(numnodo))[0]['history'][i]['emergency']
+      jnemergency.append(varauxem)
+      varauxda=jn1.get(str(numnodo))[0]['history'][i]['date']
+      jndate.append(varauxda)
+      varauxhr=jn1.get(str(numnodo))[0]['history'][i]['hour']
+      varauxhr=int(varauxhr[0:2])
+      jhours.append(varauxhr)
+  #preproc no repetidos en jhours
+  jhoursp=[]
+  for item in jhours:
+      if item not in jhoursp:
+          jhoursp.append(item)
+  #para jnumsoc
+  for item in jhoursp:
+    jnumsoc.append(jhours.count(item))
+  #para jndate yconvertir a datetime
+  dtdate=list()
+  for y in range(len(jndate)):
+    dtdate.append(datetime.datetime.strptime(str(jndate[y][0]), "{'year': '%Y',  'month': '%m', 'day': '%d'}"))
+  #para listar tipos de emergencia no repetidos y contarlos
+  nremerg=[]#emergencias de cada tipo no repetidas
+  jnemergency2=list()#una copia para tener una lista de strs
+  countemetype=list()#aqui se depositan los numeros de ocurrencia de cada emergencia segun el orden de nremerg
+  for a in jnemergency:
+    if len(a)>1:
+      jnemergency2.append(str(a[0]))
+      jnemergency2.append(str(a[1]))
+    else:
+      jnemergency2.append(str(a[0]))
+
+  for item in jnemergency2:
+      if item not in nremerg:
+          nremerg.append(item)
+  #print(nremerg)
+  #print(jnemergency)
+  ##print(nremerg)
+  #para obtener num de datos
+  for item in nremerg:
+    countemetype.append(jnemergency2.count(item))
+  ##print(countemetype)
+
+  return dtdate,jnemergency2,jhoursp,jnumsoc,nremerg,countemetype,jrisks
 
 def obtencionlistasJS2():
   typemergency=list()
@@ -144,7 +256,7 @@ def obtencionlistasJS2():
   for y in range(len(jdaystab)):
     dtdate.append(datetime.datetime.strptime(str(jdaystab[y][0]), "{'year': '%Y',  'month': '%m', 'day': '%d'}"))
   return dtdate,jnums
-
+#devuelve en ese orden fechas convertidas, numeros de ocurrencia
 def regresionLinealNumEmergen(X, Y, numuser,numnodo):
     X = X.reshape(-1, 1)
     # cada elemento solo tiene un feature
@@ -168,17 +280,22 @@ def regresionLinealNumEmergen(X, Y, numuser,numnodo):
     prediccion = W[0] * numuser
     st.write("Segun la hora recibida: ", numuser, ", se predijo este número de emergencias:", round(prediccion[0]),
           "Esos son los numeros de casos probables en el nodo",numnodo)
+    st.write("*Prediccion realizada mediante el modelo de regresión lineal*")
 
 
 
 def plothour_vs_numcalls(x,y,color1):
-    p = grafica(
-    title='Analisis tipo de emergencias',
-    x_axis_label='Horas',
-    y_axis_label='Num emergencias')
+  infonumcalls=[]
+  for i in range(len(c)):
+    infonumcalls.append([x[i],y[i]])
+  frameinfo=pd.DataFrame(infonumcalls,columns=['Hora','Num. emergencias'])
+  if st.checkbox('Mostrar tabla de número de emergencias'):
+    st.table(frameinfo)
+  st.header('Emergencias acumuladas mostradas por hora de ocurrencia')
+  dotgraph = p9.ggplot(data=frameinfo,
+                        mapping=p9.aes(x='Hora', y='Num. emergencias'))
 
-    p.line(x, y, legend_label='Numero de emergencias', line_width=2,color=color1)
-    st.bokeh_chart(p, use_container_width=True)
+  st.pyplot(p9.ggplot.draw(dotgraph + p9.geom_line(color=color1)))
     #muestra una lámina graficando este tipo de datos
 
 def plottypecalls(x,y,color1):
@@ -192,6 +309,57 @@ def plottypecalls(x,y,color1):
     #muestra una lámina graficando este tipo de datos
 
 
+def RegresionLogML(predict):
+
+  '''porcentaje + 0= medic
+  porcentaje + 1=fire
+  porcentaje +2=security
+  porcentaje +3=sos
+  porcentaje +4=refuge
+  porcentaje +5= others'''
+  X=[[0.8,6],[0.8,7],[0.8,8],[0.8,9],[0.8,10],
+    [0.7,6],[0.7,7],[0.7,8],[0.7,9],[0.7,10],
+    [0.6,6],[0.6,7],[0.6,8],[0.6,9],[0.6,10],
+    [0.9,6],[0.9,7],[0.9,8],[0.9,9],[0.9,10],
+    [1,6],[1,7],[1,8],[1,9],[1,10],
+    [1.6,6],[1.6,7],[1.6,8],[1.6,9],[1.6,10],
+    [1.7,6],[1.7,7],[1.7,8],[1.7,9],[1.7,10],
+    [1.8,6],[1.8,7],[1.8,8],[1.8,9],[1.8,10],
+    [1.9,6],[1.9,7],[1.9,8],[1.9,9],[1.9,10],
+    [2,6],[2,7],[2,8],[2,9],[2,10],
+    [2.6,6],[2.6,7],[2.6,8],[2.6,9],[2.6,10],
+    [2.7,6],[2.7,7],[2.7,8],[2.7,9],[2.7,10],
+    [2.8,6],[2.8,7],[2.8,8],[2.8,9],[2.8,10],
+    [2.9,6],[2.9,7],[2.9,8],[2.9,9],[2.9,10],
+    [3,6],[3,7],[3,8],[3,9],[3,10],
+    [3.6,6],[3.6,7],[3.6,8],[3.6,9],[3.6,10],
+    [3.7,6],[3.7,7],[3.7,8],[3.7,9],[3.7,10],
+    [3.8,6],[3.8,7],[3.8,8],[3.8,9],[3.8,10],
+    [3.9,6],[3.9,7],[3.9,8],[3.9,9],[3.9,10],
+    [4,6],[4,7],[4,8],[4,9],[4,10],
+    ]
+  y=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
+  df=pd.DataFrame(X,columns=["%+type","Risk index"])
+  y=np.array(y)
+  df['Propenso a']=y
+  X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.20)#aqui se pone en practica que el testing solo sera 20%
+  model=LogisticRegression().fit(X_test,y_test)
+  y_pred=model.predict(X_test)
+  score=accuracy_score(y_test,y_pred)#aqui brinda el procentaje de aprendizaje adquirido con el train
+  y_pred=model.predict(predict)
+  if y_pred[0]==0:
+    nem='medic'
+  elif y_pred[0]==1:
+    nem='fire'
+  elif y_pred[0]==2:
+    nem='security'
+  elif y_pred[0]==3:
+    nem='sos'
+  else:
+    nem='other'#falta entrenarlo con otros tipos de emergencia aparte de losmencionados
+  st.write("Para el presente nodo, se predice que es más vulnerable a emergencias de tipo: ",nem)
+  st.write("*Se utilizó el método de Regresión logística con un aprendizaje de ",score*100,"%*")
+  st.success("Se ha completado el cálculo con éxito")
 
 
 
@@ -212,36 +380,44 @@ def plottypecalls(x,y,color1):
 nodoseleccionado = st.radio("Seleccione un nodo",
 ('Mama Duck', 'Nodo 2', 'Nodo 3', 'Nodo 4','General'))
 if nodoseleccionado=='Mama Duck':
-    st.header('Análisis de los datos del Nodo Mama Duck')
-    a,b,c,d,e,f=obtencionlistasJS('1')
+  st.header('Análisis de los datos del Nodo Mama Duck')
+  a,b,c,d,e,f,g=obtencionlistasJS('1')
 #quiero intentar analizar equis tipo de llamada mas probable
-    plothour_vs_numcalls(c,d,'red')
+  
+  plothour_vs_numcalls(c,d,'blue')
+
 #predTipoEmergencia(x,y)
     #if st.button("Estimar no. de emergencias dada una hora", key=None, 
    #help="Este botón lleva a cabo una función de inteligencia artificial, la cual, analizando el número de emergencias y las horas, predice por regresión lineal emergencias estimadas"):
-    user_input = st.multiselect("Seleccione la hora u horas a predecir",[0.00,1.00,2.00,3.00,4.00,5.00,6.00,7.00,8.00,9.00,10.00,11.00,12.00,13.00,14.00,15.00,16.00,17.00,18.00,19.00,20.00,21.00,22.00,23.00])
-    for x in user_input:
-        regresionLinealNumEmergen(np.array(c), np.array(d), int(x),nodoseleccionado)
-        st.success("Se ha completado el análisis para la hora seleccionada")
+  user_input = st.multiselect("Seleccione la hora u horas a predecir",[0.00,1.00,2.00,3.00,4.00,5.00,6.00,7.00,8.00,9.00,10.00,11.00,12.00,13.00,14.00,15.00,16.00,17.00,18.00,19.00,20.00,21.00,22.00,23.00])
+  for x in user_input:
+    regresionLinealNumEmergen(np.array(c), np.array(d), int(x),nodoseleccionado)
+    st.success("Se ha completado el análisis para la hora seleccionada")
+  st.header('Análisis de emergencias recurrentes')
+  if st.button("Obtener análisis de emergencia más probable"):
+    RegresionLogML(prepdatoLRML(e,f,g))
 
     
 
 elif nodoseleccionado=='Nodo 2':
-    st.header('Análisis de los datos del Nodo 2')
-    a,b,c,d,e,f=obtencionlistasJS('2')
+  st.header('Análisis de los datos del Nodo 2')
+  a,b,c,d,e,f,g=obtencionlistasJS('2')
 #quiero intentar analizar equis tipo de llamada mas probable
-    plothour_vs_numcalls(c,d,'orange')
+  plothour_vs_numcalls(c,d,'red')
 #predTipoEmergencia(x,y)
-    #if st.button("Estimar no. de emergencias dada una hora", key=None, 
-   #help="Este botón lleva a cabo una función de inteligencia artificial, la cual, analizando el número de emergencias y las horas, predice por regresión lineal emergencias estimadas"):
-    user_input = st.multiselect("Seleccione la hora u horas a predecir",[0.00,1.00,2.00,3.00,4.00,5.00,6.00,7.00,8.00,9.00,10.00,11.00,12.00,13.00,14.00,15.00,16.00,17.00,18.00,19.00,20.00,21.00,22.00,23.00])
-    for x in user_input:
-        regresionLinealNumEmergen(np.array(c), np.array(d), int(x),nodoseleccionado)
-        st.success("Se ha completado el análisis para la hora seleccionada")
+  #if st.button("Estimar no. de emergencias dada una hora", key=None, 
+  #help="Este botón lleva a cabo una función de inteligencia artificial, la cual, analizando el número de emergencias y las horas, predice por regresión lineal emergencias estimadas"):
+  user_input = st.multiselect("Seleccione la hora u horas a predecir",[0.00,1.00,2.00,3.00,4.00,5.00,6.00,7.00,8.00,9.00,10.00,11.00,12.00,13.00,14.00,15.00,16.00,17.00,18.00,19.00,20.00,21.00,22.00,23.00])
+  for x in user_input:
+      regresionLinealNumEmergen(np.array(c), np.array(d), int(x),nodoseleccionado)
+      st.success("Se ha completado el análisis para la hora seleccionada")
+  st.header('Análisis de emergencias recurrentes')
+  if st.button("Obtener análisis de emergencia más probable"):
+    RegresionLogML(prepdatoLRML(e,f,g))
 
 elif nodoseleccionado=='Nodo 3':
     st.header('Análisis de los datos del Nodo 3')
-    a,b,c,d,e,f=obtencionlistasJS('3')
+    a,b,c,d,e,f,g=obtencionlistasJS('3')
 #quiero intentar analizar equis tipo de llamada mas probable
     plothour_vs_numcalls(c,d,'brown')
 #predTipoEmergencia(x,y)
@@ -251,9 +427,12 @@ elif nodoseleccionado=='Nodo 3':
     for x in user_input:
         regresionLinealNumEmergen(np.array(c), np.array(d), int(x),nodoseleccionado)
         st.success("Se ha completado el análisis para la hora seleccionada")
+    st.header('Análisis de emergencias recurrentes')
+    if st.button("Obtener análisis de emergencia más probable"):
+      RegresionLogML(prepdatoLRML(e,f,g))
 elif nodoseleccionado=='Nodo 4':
     st.header('Análisis de los datos del Nodo 4')
-    a,b,c,d,e,f=obtencionlistasJS('4')
+    a,b,c,d,e,f,g=obtencionlistasJS('4')
 #quiero intentar analizar equis tipo de llamada mas probable
     plothour_vs_numcalls(c,d,'purple')
 #predTipoEmergencia(x,y)
@@ -263,34 +442,50 @@ elif nodoseleccionado=='Nodo 4':
     for x in user_input:
         regresionLinealNumEmergen(np.array(c), np.array(d), int(x),nodoseleccionado)
         st.success("Se ha completado el análisis para la hora seleccionada")
+    st.header('Análisis de emergencias recurrentes')
+    if st.button("Obtener análisis de emergencia más probable"):
+      RegresionLogML(prepdatoLRML(e,f,g))
 #voy a desplegar el historial dellamadas en una tabla
 #voy a mostrar el numero de llamadas por dia
 
 elif nodoseleccionado=='General':
   st.header('Análisis general de la red Mama Duck')
-
-
-  a,b=obtencionlistasJS2()
+  xi,yi,c,d,e,f,g=obtencionlistasJS3()
+  #x=fecha, y=emergencias sin repetir
+  plothour_vs_numcalls(c,d,'red')
+  user_input = st.multiselect("Seleccione la hora u horas a predecir",[0.00,1.00,2.00,3.00,4.00,5.00,6.00,7.00,8.00,9.00,10.00,11.00,12.00,13.00,14.00,15.00,16.00,17.00,18.00,19.00,20.00,21.00,22.00,23.00])
+  for x in user_input:
+      regresionLinealNumEmergen(np.array(c), np.array(d), int(x),nodoseleccionado)
+      st.success("Se ha completado el análisis para la hora seleccionada")
   listdt=list()
+  a,b=obtencionlistasJS2()
+
   for x in range(len(a)):
     stra=str(a[x])
     listdt.append([stra[5:10],b[x]])
   df=pd.DataFrame(listdt,columns=['Fecha','Emergencias'])
-  #df["Fecha"]=pd.to_datetime(df["Fecha"])
-  #df["Fecha"]=str(df["Fecha"][:])
-  #df.sort_values(['Fecha'])
+  st.header("Historial de emergencias por fecha")
   dotgraph = p9.ggplot(data=df,
                           mapping=p9.aes(x='Fecha', y='Emergencias'))
 
-  st.pyplot(p9.ggplot.draw(dotgraph + p9.geom_point(color='green',alpha=0.5,size=2.7)))
+  st.pyplot(p9.ggplot.draw(dotgraph +p9.geom_point(color='green',alpha=0.5,size=2.7)))
   #voy a mostrar el numero de llamadas por hora dado un dia
   #mostrar estadistica de tipo de accidente--graficas
   #mostrar warnings del nodo--lo que hizo alex de acuerdo con el json recibido
   #mostrar emergencias comunes--haciendo abstraccion de los datos recibidos
   #predecir posibles accidentes totales--usando el algoritmo de IRIS (visto en clases de ML)
+  st.header('Análisis de emergencias recurrentes globales')
+  if st.button("Análisis de emergencia más probable"):
+    RegresionLogML(prepdatoLRMLGen(e,f,g))
+
   st.header("Mapa de nodos y emergencias")
   st.write("Hexagonos: ubicacion de nodos, Círculo verde: casos de emergencia")
   df1,df2=obtencionCoords()
+  if st.checkbox('Mostrar tabla de coordenadas de emergencia'):
+    st.write(df1)
+  if st.checkbox('Mostrar tabla de coordenadas de Nodos'):
+    st.write(df2)
+
   st.pydeck_chart(pdk.Deck(
   map_style='mapbox://styles/uberdata/cjoqbbf6l9k302sl96tyvka09',
   initial_view_state=pdk.ViewState(
@@ -323,21 +518,24 @@ elif nodoseleccionado=='General':
   ))
   st.title("Nodos receptores Mama Duck")
   st.write("A continución se muestra la distribución de nodos de Mama Duck, sus interconexiones e información")
-  g=net.Network(height='400px', width='50%')
+  g=net.Network(height='400px', width='60%')
+  colacolores=["green","red","yellow","blue"]
   for i in range(len(jn1)):
-
-    g.add_node(i+1,title=[jn1.get(str(strindices[i]))[0].get('name'),"\nholamundo"     ] )
+    #issue: no detecta los saltos de linea
+    g.add_node(i+1,title=jn1.get(str(strindices[i]))[0].get('name')+
+    """\n"""+ """Status: """+jn1.get(str(strindices[i]))[0].get('status')+ """
+    Risk index:"""+str(jn1.get(str(strindices[i]))[0].get('risks')[0]),color=colacolores.pop(),borderWidthSelected=3,labelHighlightBold=True)
       
-  for st in strindices:
-    for s in range(len(jn1.get(st)[0]['conections'])):
-      aux=jn1.get(st)[0]['conections']             
-      g.add_edge(int(st),int(aux[s]))
-
+  for sti in strindices:
+    for s in range(len(jn1.get(sti)[0]['conections'])):
+      aux=jn1.get(sti)[0]['conections']             
+      g.add_edge(int(sti),int(aux[s]),color='black')
+  
 
   g.save_graph('graph.html')
   HtmlFile=open('graph.html','r',encoding='utf-8')
   sourceCode=HtmlFile.read()
-  components.html(sourceCode,height=900,width=900)
+  components.html(sourceCode,height=1500,width=1500)
 
 
 

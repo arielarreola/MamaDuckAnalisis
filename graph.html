@@ -12,7 +12,7 @@
 <style type="text/css">
 
         #mynetwork {
-            width: 50%;
+            width: 60%;
             height: 400px;
             background-color: #ffffff;
             border: 1px solid lightgray;
@@ -50,8 +50,8 @@
         
 
         // parsing and collecting nodes and edges from the python
-        nodes = new vis.DataSet([{"id": 1, "label": 1, "shape": "dot", "title": ["MamaDuck", "\nholamundo"]}, {"id": 2, "label": 2, "shape": "dot", "title": ["Node2", "\nholamundo"]}, {"id": 3, "label": 3, "shape": "dot", "title": ["Node3", "\nholamundo"]}, {"id": 4, "label": 4, "shape": "dot", "title": ["Node4", "\nholamundo"]}]);
-        edges = new vis.DataSet([{"from": 1, "to": 2}, {"from": 1, "to": 3}, {"from": 1, "to": 4}, {"from": 2, "to": 3}, {"from": 4, "to": 2}]);
+        nodes = new vis.DataSet([{"borderWidthSelected": 3, "color": "blue", "id": 1, "label": 1, "labelHighlightBold": true, "shape": "dot", "title": "MamaDuck\nStatus: active\n    Risk index:{\u0027firerisk\u0027: 7, \u0027medicrisk\u0027: 8, \u0027securityrisk\u0027: 5, \u0027other\u0027: 4}"}, {"borderWidthSelected": 3, "color": "yellow", "id": 2, "label": 2, "labelHighlightBold": true, "shape": "dot", "title": "Node2\nStatus: active\n    Risk index:{\u0027firerisk\u0027: 8, \u0027medicrisk\u0027: 6, \u0027securityrisk\u0027: 3, \u0027other\u0027: 6}"}, {"borderWidthSelected": 3, "color": "red", "id": 3, "label": 3, "labelHighlightBold": true, "shape": "dot", "title": "Node3\nStatus: active\n    Risk index:{\u0027firerisk\u0027: 5, \u0027medicrisk\u0027: 6, \u0027securityrisk\u0027: 7, \u0027other\u0027: 6}"}, {"borderWidthSelected": 3, "color": "green", "id": 4, "label": 4, "labelHighlightBold": true, "shape": "dot", "title": "Node4\nStatus: active\n    Risk index:{\u0027firerisk\u0027: 5, \u0027medicrisk\u0027: 6, \u0027securityrisk\u0027: 7, \u0027other\u0027: 6}"}]);
+        edges = new vis.DataSet([{"color": "black", "from": 1, "to": 2}, {"color": "black", "from": 1, "to": 3}, {"color": "black", "from": 1, "to": 4}, {"color": "black", "from": 2, "to": 3}, {"color": "black", "from": 4, "to": 2}]);
 
         // adding nodes and edges to the graph
         data = {nodes: nodes, edges: edges};
