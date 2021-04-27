@@ -48,7 +48,8 @@ def obtencionCoords():
       auxlat=jn1.get(str(s))[0]['history'][i]['localization'][0]['lat']
       auxlon=jn1.get(str(s))[0]['history'][i]['localization'][0]['long']
       list1.append([auxlat,auxlon])
-      list2.append([jn1.get(str(s))[0]['localization'][0]['lat'],jn1.get('1')[0]['localization'][0]['long']])
+
+    list2.append([jn1.get(str(s))[0]['localization'][0]['lat'],jn1.get(str(s))[0]['localization'][0]['long']])
   a1=np.array(list1)
   a2=np.array(list2)
   #print(a1.reshape(-2,2))
