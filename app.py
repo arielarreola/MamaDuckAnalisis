@@ -343,7 +343,6 @@ elif nodoseleccionado=='General':
   st.title("Nodos receptores Mama Duck")
   st.write("A continución se muestra la distribución de nodos de Mama Duck, sus interconexiones e información")
   g=net.Network(height='400px', width='50%')
-  strindices=[]
   for i in range(len(jn1)):
 
     g.add_node(i+1,title=[jn1.get(str(strindices[i]))[0].get('name'),"\nholamundo"     ] )
